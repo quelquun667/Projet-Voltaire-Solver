@@ -4,6 +4,11 @@
 
 Une extension Chrome intelligente pour vous aider dans vos exercices Projet Voltaire, propulsée par l'IA Gemini de Google.
 
+## Attention
+
+L'extension fonctionne seulement pour l'interface web suivante : 
+[Image](/images/interface.png)
+
 ## ✨ Fonctionnalités
 
 *   **🤖 Auto-Solve IA** : Utilise Google Gemini 1.5 Flash pour analyser la phrase et trouver la faute (ou l'absence de faute) automatiquement.
