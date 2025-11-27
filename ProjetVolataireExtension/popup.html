@@ -5,11 +5,18 @@
   <meta charset="UTF-8">
   <title>Projet Voltaire Assistant</title>
   <style>
+    html,
+    body {
+      min-height: 100vh;
+      margin: 0;
+    }
+
     body {
       width: 320px;
       padding: 15px;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f9f9f9;
+      box-sizing: border-box;
     }
 
     h1 {
@@ -241,10 +248,29 @@
       display: flex;
       justify-content: center;
       align-items: center;
+      position: relative;
     }
 
     .footer .icon-btn:hover {
       background-color: #0056b3;
+    }
+
+    /* Notification Badge */
+    .notification-badge {
+      position: absolute;
+      top: -5px;
+      right: -5px;
+      width: 10px;
+      height: 10px;
+      background-color: red;
+      border-radius: 50%;
+      border: 2px solid white;
+      display: none;
+      /* Hidden by default */
+    }
+
+    .notification-badge.visible {
+      display: block;
     }
 
     /* Dark Mode Styles */
@@ -347,7 +373,10 @@
   </div>
 
   <div class="footer">
-    <button id="openSettings" class="icon-btn" title="Paramètres">⚙️</button>
+    <button id="openSettings" class="icon-btn" title="Paramètres">
+      ⚙️
+      <span id="settingsBadge" class="notification-badge"></span>
+    </button>
   </div>
 
   <div id="log"></div>

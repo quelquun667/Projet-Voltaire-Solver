@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Projet Voltaire Assistant",
-  "version": "1.4.0",
-  "description": "Assistant pour Projet Voltaire avec mode inspecteur",
+  "version": "1.4.3",
+  "description": "Automatiser la résolution des exercices et certifications du Projet Voltaire",
   "permissions": [
     "activeTab",
     "scripting",

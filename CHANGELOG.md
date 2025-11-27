@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.4.3] - 2025-11-27
+
+### ✨ Ajouté
+- **Vérification Auto au Démarrage** : L'extension vérifie désormais automatiquement les mises à jour à chaque ouverture du popup.
+- **Notification Visuelle** : Un badge rouge apparaît sur l'icône des paramètres si une nouvelle version est disponible.
+
+### 🐛 Corrigé
+- **Thème Sombre** : Correction du bug d'affichage (fond blanc) en forçant la hauteur de la fenêtre.
+- **Bouton Valider** : Amélioration de la détection du bouton "Valider" (tolérance aux majuscules/espaces).
+- **Interface** : Correction de l'affichage du badge de notification qui était invisible.
+
 ## [1.4.0] - 2025-11-27
 
 ### ✨ Ajouté

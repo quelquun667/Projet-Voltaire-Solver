@@ -15,7 +15,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const themeToggle = document.getElementById('themeToggle');
     const currentVersionSpan = document.getElementById('currentVersion');
     const checkUpdateBtn = document.getElementById('checkUpdate');
+
     const updateStatusDiv = document.getElementById('updateStatus');
+    const settingsBadge = document.getElementById('settingsBadge');
 
     // Load saved state
     chrome.storage.local.get(['inspectorEnabled', 'solveEnabled', 'delayMin', 'delayMax', 'apiKey', 'aiEnabled', 'darkMode'], (result) => {
@@ -31,6 +33,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (result.delayMin !== undefined) delayMinInput.value = result.delayMin;
         if (result.delayMax !== undefined) delayMaxInput.value = result.delayMax;
         if (result.apiKey) apiKeyInput.value = result.apiKey;
+        if (result.delayMin !== undefined) delayMinInput.value = result.delayMin;
+        if (result.delayMax !== undefined) delayMaxInput.value = result.delayMax;
+        if (result.apiKey) apiKeyInput.value = result.apiKey;
+
+        // Auto-check for updates on load
+        checkForUpdates(true);
     });
 
     // Settings Menu Logic
@@ -57,9 +65,13 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // Update Checker
-    checkUpdateBtn.addEventListener('click', async () => {
-        updateStatusDiv.textContent = 'Vérification...';
-        updateStatusDiv.style.color = '#555';
+    checkUpdateBtn.addEventListener('click', () => checkForUpdates(false));
+
+    async function checkForUpdates(silent = false) {
+        if (!silent) {
+            updateStatusDiv.textContent = 'Vérification...';
+            updateStatusDiv.style.color = '#555';
+        }
 
         try {
             const currentVersion = chrome.runtime.getManifest().version;
@@ -71,18 +83,31 @@ document.addEventListener('DOMContentLoaded', () => {
             const remoteVersion = remoteManifest.version;
 
             if (compareVersions(remoteVersion, currentVersion) > 0) {
-                updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Auto-Solve" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
-                updateStatusDiv.style.color = 'green';
+                // Update available
+                if (silent) {
+                    settingsBadge.classList.add('visible');
+                    // Also update status text if settings menu is opened later
+                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Auto-Solve" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
+                    updateStatusDiv.style.color = 'green';
+                } else {
+                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Auto-Solve" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
+                    updateStatusDiv.style.color = 'green';
+                }
             } else {
-                updateStatusDiv.textContent = 'Vous êtes à jour !';
-                updateStatusDiv.style.color = 'green';
+                // No update
+                if (!silent) {
+                    updateStatusDiv.textContent = 'Vous êtes à jour !';
+                    updateStatusDiv.style.color = 'green';
+                }
             }
         } catch (error) {
             console.error(error);
-            updateStatusDiv.textContent = 'Erreur lors de la vérification.';
-            updateStatusDiv.style.color = 'red';
+            if (!silent) {
+                updateStatusDiv.textContent = 'Erreur lors de la vérification.';
+                updateStatusDiv.style.color = 'red';
+            }
         }
-    });
+    }
 
     function compareVersions(v1, v2) {
         const parts1 = v1.split('.').map(Number);
