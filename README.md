@@ -7,7 +7,9 @@ Une extension Chrome intelligente pour vous aider dans vos exercices Projet Volt
 ## Attention
 
 L'extension fonctionne seulement pour l'interface web suivante : 
-[Image](/images/interface.png)
+<p align="center">
+<img src="images/interface.png" alt="Interface Projet Voltaire" width="70%">
+</p>
 
 ## ✨ Fonctionnalités
 
