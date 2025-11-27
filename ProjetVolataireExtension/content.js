@@ -8,6 +8,8 @@ let delayMin = 1000;
 let delayMax = 2000;
 
 let aiEnabled = false;
+let isSolving = false;
+let lastSolvedSignature = '';
 
 // Load initial settings
 chrome.storage.local.get(['delayMin', 'delayMax', 'aiEnabled'], (result) => {
@@ -105,13 +107,17 @@ function logElementInfo(e) {
 
 function isVisible(elem) {
     if (!elem) return false;
-    return !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length);
+    const style = window.getComputedStyle(elem);
+    return !!(elem.offsetWidth || elem.offsetHeight || elem.getClientRects().length) &&
+        style.visibility !== 'hidden' &&
+        style.display !== 'none' &&
+        style.opacity !== '0';
 }
 
 let lastDetectedSentence = '';
 
 function solveLoop() {
-    if (!solveEnabled) return;
+    if (!solveEnabled || isSolving) return;
 
     const currentDelay = getRandomDelay();
 
@@ -131,6 +137,15 @@ function solveLoop() {
         return;
     }
 
+    // 1.5 Check for Drag and Drop (Tableau)
+    const dragDropInstruction = getDragDropInstruction();
+    if (dragDropInstruction) {
+        console.log('Drag and Drop detected:', dragDropInstruction);
+        solveDragAndDrop(dragDropInstruction);
+        setTimeout(solveLoop, currentDelay + 3000); // Wait longer for drag operations
+        return;
+    }
+
     // 2. Find the "Valider" or "Continuer" button (Main flow)
     const buttons = Array.from(document.querySelectorAll(config.buttonSelector)).filter(isVisible);
     const actionButton = buttons.find(btn => {
@@ -142,6 +157,7 @@ function solveLoop() {
         console.log('Clicking action button:', actionButton.innerText);
         actionButton.click();
         lastDetectedSentence = ''; // Reset for next sentence
+        lastSolvedSignature = ''; // Reset for next drag and drop
         setTimeout(solveLoop, currentDelay);
         return;
     }
@@ -231,6 +247,7 @@ function handleCorrection(nextButton) {
 
     console.log('Clicking Next (Correction)...');
     nextButton.click();
+    lastSolvedSignature = ''; // Reset for next drag and drop
 }
 
 function saveCorrectAnswer(sentence, word) {
@@ -252,6 +269,8 @@ function simulateClick(element) {
 }
 
 function solveSentence(words, fullSentence, instruction) {
+    if (isSolving) return;
+    isSolving = true;
     console.log('Attempting to auto-solve...');
 
     // 0. AI Mode
@@ -273,6 +292,7 @@ function solveSentence(words, fullSentence, instruction) {
                     console.log('AI says: No Mistake. Searching for button...');
 
                     // Search globally for the button, ignoring the passed 'words' list to be safe
+                    // Prioritize data-testid
                     // Exclude elements that look like instructions (contain "cliquez", "sinon")
                     const allElements = Array.from(document.querySelectorAll('button, div[role="button"], div[class*="button"], span, div[tabindex="0"]'));
                     const noMistakeBtn = allElements.find(el => {
@@ -314,12 +334,16 @@ function solveSentence(words, fullSentence, instruction) {
                 console.error('AI Error:', response ? response.error : 'Unknown error');
                 fallbackSolve(words, fullSentence);
             }
+            isSolving = false;
         });
         return;
     }
 
     fallbackSolve(words, fullSentence);
+    isSolving = false;
 }
+
+
 
 function fallbackSolve(words, fullSentence) {
     // 1. Check if we know the answer (Learning Mode)
@@ -348,4 +372,273 @@ function fallbackSolve(words, fullSentence) {
             wordToClick.style.border = '2px solid orange';
         }
     });
+}
+
+
+// --- Drag and Drop Logic ---
+
+function getDragDropInstruction() {
+    // Look for specific text indicating a drag and drop exercise
+    const allDivs = Array.from(document.querySelectorAll('div'));
+    const instructionDiv = allDivs.find(div => {
+        const text = div.innerText || '';
+        return (text.includes('Classer les') || text.includes('Déposer')) &&
+            isVisible(div) &&
+            text.length < 100 &&
+            !text.includes('COUP DE POUCE');
+    });
+    return instructionDiv ? instructionDiv.innerText.trim() : null;
+}
+
+function solveDragAndDrop(instruction) {
+    if (isSolving) return;
+    console.log('Solving Drag and Drop...');
+
+    // 1. Identify Draggable Items
+    const allTextDivs = Array.from(document.querySelectorAll('div[dir="auto"]')).filter(isVisible);
+
+    // Filter out headers and instructions
+    const potentialItems = allTextDivs.filter(el => {
+        const text = el.innerText.trim();
+        return text.length > 0 &&
+            text.length < 50 &&
+            text !== instruction &&
+            !text.includes('Pluriel en') &&
+            !text.includes('Terminaison') &&
+            !text.includes('Valider') &&
+            !text.includes('Continuer') &&
+            !text.includes('Suivant') &&
+            !text.includes('CORRECTION') &&
+            !text.includes('Classer les');
+    });
+
+    // 2. Identify Drop Zones (Columns)
+    const potentialHeaders = allTextDivs.filter(el => {
+        const text = el.innerText.trim();
+        return text.includes('Pluriel en') || text.includes('Terminaison');
+    });
+
+    const columns = potentialHeaders.map(el => el.innerText.trim());
+    const items = potentialItems.map(el => el.innerText.trim());
+
+    console.log('Items found:', items);
+    console.log('Columns found:', columns);
+
+    if (items.length === 0 || columns.length === 0) {
+        console.warn('Could not find items or columns for drag and drop.');
+        isSolving = false; // Reset flag
+        return;
+    }
+
+    const signature = instruction + items.join('') + columns.join('');
+    console.log('Current Signature:', signature);
+    console.log('Last Solved Signature:', lastSolvedSignature);
+
+    if (signature === lastSolvedSignature) {
+        console.log('Already solved this configuration. Skipping AI request.');
+        return;
+    }
+
+    isSolving = true;
+    lastSolvedSignature = signature;
+
+    if (aiEnabled) {
+        chrome.runtime.sendMessage({
+            action: 'solveDragAndDrop',
+            instruction: instruction,
+            items: items,
+            columns: columns
+        }, (response) => {
+            if (response && response.success) {
+                console.log('AI Classification:', response.mapping);
+                performDragAndDrop(response.mapping, potentialItems, potentialHeaders);
+            } else {
+                console.error('AI Error:', response ? response.error : 'Unknown error');
+                isSolving = false; // Reset flag on error
+            }
+        });
+    } else {
+        isSolving = false; // Reset flag if AI disabled
+    }
+}
+
+function performDragAndDrop(mapping, itemElements, columnElements) {
+    if (!mapping) {
+        isSolving = false;
+        return;
+    }
+
+    const moves = [];
+
+    // Find all drop zones globally first
+    const allDropZones = Array.from(document.querySelectorAll('.r-vacyoi')).filter(isVisible);
+    console.log(`Found ${allDropZones.length} drop zones with class .r-vacyoi`);
+
+    for (const [itemText, columnText] of Object.entries(mapping)) {
+        const source = itemElements.find(el => el.innerText.trim() === itemText);
+        const targetHeader = columnElements.find(el => el.innerText.trim() === columnText);
+
+        if (source && targetHeader) {
+            let target = null;
+
+            // Strategy 1: Index-based matching (Most robust if counts match)
+            // If we have N headers and N drop zones, assume they map 1:1
+            if (columnElements.length === allDropZones.length) {
+                const headerIndex = columnElements.indexOf(targetHeader);
+                if (headerIndex !== -1) {
+                    target = allDropZones[headerIndex];
+                    console.log(`Strategy 1 (Index): Mapped header "${columnText}" (index ${headerIndex}) to drop zone`, target);
+                }
+            }
+
+            // Strategy 2: DOM Traversal (Fallback)
+            if (!target) {
+                // Check siblings of header
+                if (targetHeader.nextElementSibling && targetHeader.nextElementSibling.classList.contains('r-vacyoi')) {
+                    target = targetHeader.nextElementSibling;
+                }
+                // Check siblings of parent
+                else if (targetHeader.parentElement && targetHeader.parentElement.nextElementSibling && targetHeader.parentElement.nextElementSibling.classList.contains('r-vacyoi')) {
+                    target = targetHeader.parentElement.nextElementSibling;
+                }
+                // Broader search
+                else {
+                    const container = targetHeader.closest('div[style*="flex-direction: row"]') || targetHeader.parentElement.parentElement;
+                    if (container) {
+                        target = container.querySelector('.r-vacyoi');
+                    }
+                }
+            }
+
+            // Strategy 3: Generic Fallback (Last resort)
+            if (!target) {
+                target = targetHeader.nextElementSibling || (targetHeader.parentElement ? targetHeader.parentElement.nextElementSibling : null) || targetHeader;
+            }
+
+            // Store text identifiers instead of elements to allow re-querying
+            moves.push({ itemText, columnText });
+        }
+    }
+
+    // Execute moves sequentially with delay
+    let moveIndex = 0;
+    function nextMove() {
+        if (moveIndex >= moves.length) {
+            console.log('All moves completed. Polling for Validate button...');
+            pollForValidate(0);
+            return;
+        }
+
+        const move = moves[moveIndex];
+        console.log(`Processing move ${moveIndex + 1}/${moves.length}: ${move.itemText} -> ${move.columnText}`);
+
+        // Re-query elements to handle DOM updates/re-renders
+        const allTextDivs = Array.from(document.querySelectorAll('div[dir="auto"]')).filter(isVisible);
+        const source = allTextDivs.find(el => el.innerText.trim() === move.itemText);
+        const targetHeader = allTextDivs.find(el => el.innerText.trim() === move.columnText);
+
+        if (!source) {
+            console.warn(`Source element "${move.itemText}" not found. Skipping.`);
+            moveIndex++;
+            setTimeout(nextMove, 500);
+            return;
+        }
+
+        if (!targetHeader) {
+            console.warn(`Target header "${move.columnText}" not found. Skipping.`);
+            moveIndex++;
+            setTimeout(nextMove, 500);
+            return;
+        }
+
+        // Find drop zone dynamically
+        let target = null;
+        const allDropZones = Array.from(document.querySelectorAll('.r-vacyoi')).filter(isVisible);
+
+        // Re-run targeting logic
+        // Strategy 1: Index
+        const currentHeaders = allTextDivs.filter(el => el.innerText.includes('Pluriel en') || el.innerText.includes('Terminaison'));
+        if (currentHeaders.length === allDropZones.length) {
+            const headerIndex = currentHeaders.indexOf(targetHeader);
+            if (headerIndex !== -1) target = allDropZones[headerIndex];
+        }
+
+        // Strategy 2: DOM Traversal
+        if (!target) {
+            if (targetHeader.nextElementSibling && targetHeader.nextElementSibling.classList.contains('r-vacyoi')) {
+                target = targetHeader.nextElementSibling;
+            } else if (targetHeader.parentElement && targetHeader.parentElement.nextElementSibling && targetHeader.parentElement.nextElementSibling.classList.contains('r-vacyoi')) {
+                target = targetHeader.parentElement.nextElementSibling;
+            }
+        }
+
+        // Strategy 3: Fallback
+        if (!target) {
+            target = targetHeader.nextElementSibling || (targetHeader.parentElement ? targetHeader.parentElement.nextElementSibling : null) || targetHeader;
+        }
+
+        console.log(`Clicking ${move.itemText} then Drop Zone`);
+        simulateClickAndDrop(source, target);
+
+        moveIndex++;
+        setTimeout(nextMove, 2500); // Increased delay between moves
+    }
+
+    nextMove();
+}
+
+function pollForValidate(attempts) {
+    if (attempts > 10) { // Try for 5 seconds (10 * 500ms)
+        console.warn('Validate button not found after polling.');
+        isSolving = false;
+        setTimeout(solveLoop, 3000);
+        return;
+    }
+
+    // Robust search for "Valider" button
+    const allElements = Array.from(document.querySelectorAll('[data-testid="button-text"], button, div[role="button"]'));
+
+    // Debug logging
+    console.log(`Polling for Validate (Attempt ${attempts + 1}). Found ${allElements.length} candidates.`);
+
+    const validateButton = allElements.find(el => {
+        const text = el.innerText ? el.innerText.trim().toUpperCase() : '';
+        const isMatch = text.includes('VALIDER');
+        const visible = isVisible(el);
+
+        if (isMatch) {
+            console.log('Candidate found:', el, 'Visible:', visible, 'Text:', text);
+        }
+
+        return visible && isMatch;
+    });
+
+    if (validateButton) {
+        console.log('Found Valider button:', validateButton);
+        validateButton.click();
+        if (validateButton.parentElement) validateButton.parentElement.click();
+
+        isSolving = false;
+        setTimeout(solveLoop, 3000);
+    } else {
+        console.log(`Validate button not found (attempt ${attempts + 1}). Retrying...`);
+        setTimeout(() => pollForValidate(attempts + 1), 500);
+    }
+}
+
+function simulateClickAndDrop(sourceElement, targetElement) {
+    // Click source
+    simulateClick(sourceElement);
+    sourceElement.style.border = '2px solid blue';
+
+    // Wait 1 second then click target (User request)
+    setTimeout(() => {
+        simulateClick(targetElement);
+        targetElement.style.border = '2px solid blue';
+
+        setTimeout(() => {
+            sourceElement.style.border = '';
+            targetElement.style.border = '';
+        }, 500);
+    }, 1000); // 1 second delay
 }

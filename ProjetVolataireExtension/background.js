@@ -9,6 +9,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .then(answer => sendResponse({ success: true, answer: answer }))
       .catch(error => sendResponse({ success: false, error: error.message }));
     return true; // Will respond asynchronously
+  } else if (request.action === 'solveDragAndDrop') {
+    handleAIDragAndDrop(request.instruction, request.items, request.columns)
+      .then(mapping => sendResponse({ success: true, mapping: mapping }))
+      .catch(error => sendResponse({ success: false, error: error.message }));
+    return true;
   }
 });
 
@@ -60,4 +65,63 @@ async function handleAISolve(sentence, instruction, words) {
 
   // Clean up the answer (sometimes AI adds quotes or newlines)
   return answer.replace(/^["']|["']$/g, '').trim();
+}
+
+async function handleAIDragAndDrop(instruction, items, columns) {
+  const data = await chrome.storage.local.get(['apiKey']);
+  const apiKey = data.apiKey;
+
+  if (!apiKey) {
+    throw new Error('API Key not found. Please set it in the extension popup.');
+  }
+
+  const prompt = `
+    You are a French grammar expert helping to solve a Projet Voltaire exercise.
+    
+    Instruction: "${instruction}"
+    Items to classify: ${JSON.stringify(items)}
+    Target Categories (Columns): ${JSON.stringify(columns)}
+
+    Task: Classify each item into the correct category based on the instruction.
+    
+    Return a JSON object where keys are the items and values are the corresponding column headers.
+    Format: { "mapping": { "Item1": "ColumnA", "Item2": "ColumnB" } }
+    
+    Return ONLY the JSON object. Do not add any markdown formatting or explanation.
+  `;
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      contents: [{
+        parts: [{
+          text: prompt
+        }]
+      }]
+    })
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json();
+    throw new Error(errorData.error?.message || 'API Request failed');
+  }
+
+  const result = await response.json();
+  const text = result.candidates[0].content.parts[0].text.trim();
+
+  // Parse JSON from the response
+  try {
+    // Remove markdown code blocks if present
+    const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
+    const json = JSON.parse(jsonString);
+    return json.mapping;
+  } catch (e) {
+    console.error('Failed to parse AI response:', text);
+    throw new Error('Failed to parse AI response');
+  }
 }

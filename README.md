@@ -1,5 +1,7 @@
 # 🎓 Projet Voltaire Assistant (AI Powered)
 
+### Version : 1.4.0
+
 **Cet outil est destiné à des fins éducatives et de test.**
 
 Une extension Chrome intelligente pour vous aider dans vos exercices Projet Voltaire, propulsée par l'IA Gemini de Google.
@@ -51,6 +53,10 @@ Pour éviter de dépasser les limites de l'API gratuite (15 requêtes/minute) et
 
 Une extension Chrome intelligente pour vous aider dans vos exercices Projet Voltaire, propulsée par l'IA Gemini de Google.
 
+## Activer l'Auto Solve IA
+
+Cochez l'option 2 et 3 dans l'extension pour activer l'auto solve IA.
+
 ## ✨ Fonctionnalités
 
 *   **🤖 Auto-Solve IA** : Utilise Google Gemini 1.5 Flash pour analyser la phrase et trouver la faute (ou l'absence de faute) automatiquement.
@@ -58,6 +64,8 @@ Une extension Chrome intelligente pour vous aider dans vos exercices Projet Volt
 *   **⏱️ Délai Aléatoire** : Configurez un délai minimum et maximum (ex: 2s - 4s) entre chaque réponse pour simuler un comportement humain et éviter les blocages.
 *   **✅ Gestion "Il n'y a pas de faute"** : Détecte et clique intelligemment sur le bouton "Il n'y a pas de faute" quand l'IA le suggère.
 *   **🕵️ Mode Inspecteur** : Pour le débogage, permet d'inspecter les éléments de la page.
+*   **🌗 Mode Clair/Sombre** : Interface utilisateur adaptable selon vos préférences.
+*   **🔄 Vérification de mise à jour** : Vous avertit automatiquement si une nouvelle version est disponible sur GitHub.
 
 ## 🚀 Installation
 
@@ -81,7 +89,7 @@ Pour que l'IA fonctionne, vous avez besoin d'une clé API Google Gemini. C'est g
 
 ## ⚙️ Configuration Recommandée
 
-Pour éviter de dépasser les limites de l'API gratuite (15 requêtes/minute) et rester discret :
+Pour éviter de dépasser les limites de l'API gratuite (15 requêtes/minute) :
 
 *   **Délai Min** : `3000` ms (3 secondes)
 *   **Délai Max** : `5000` ms (5 secondes)

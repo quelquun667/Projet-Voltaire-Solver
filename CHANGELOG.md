@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.4.0] - 2025-11-27
+
+### ✨ Ajouté
+- **Support Drag & Drop (Tableau)** : Résolution automatique des exercices de type "Classer les éléments" (Tableau).
+- **Interaction Click-and-Drop** : Simulation précise des clics pour déplacer les éléments (plus fiable que le glisser-déposer).
+- **Mise en cache intelligente** : L'IA n'est sollicitée qu'une seule fois par niveau (combinaison unique de mots/colonnes) pour économiser le quota.
+- **Validation Robuste** : Recherche active du bouton "Valider" (polling) à la fin de l'exercice pour gérer les apparitions tardives.
+
+### 🐛 Corrigé
+- **Stabilité** : Correction d'un bug où le script redémarrait avant la fin des déplacements.
+- **Persistance** : Amélioration de la détection des éléments qui pouvaient être perdus après un rafraîchissement du DOM.
+- **Détection "Déjà fait"** : Correction d'un faux positif où le script pensait que le nouvel exercice était déjà résolu.
+
 ## [1.2.0] - 2025-11-27
 
 ### ✨ Ajouté
