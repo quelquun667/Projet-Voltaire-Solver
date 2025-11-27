@@ -1,18 +1,24 @@
 # Changelog
 
+## [1.2.0] - 2025-11-27
+
+### ✨ Ajouté
+- **Menu Paramètres**: Ajout d'un menu de paramètres avec bascule Mode Sombre et affichage de la version.
+- **Vérificateur de mise à jour**: Implémentation d'une vérification automatique des mises à jour depuis GitHub.
+
 ## [1.1.0] - 2025-11-27
 
-### ✨ Added
-- **AI Integration**: Added Google Gemini 1.5 Flash integration for intelligent auto-solving.
-- **Random Delay**: Implemented configurable min/max delay to simulate human behavior.
-- **"No Mistake" Handling**: Improved detection and clicking of the "Il n'y a pas de faute" button, including handling of instruction text.
-- **API Key Configuration**: Added UI to input and save the Gemini API key.
+### ✨ Ajouté
+- **Intégration IA**: Ajout de l'intégration Google Gemini 1.5 Flash pour la résolution automatique intelligente.
+- **Délai Aléatoire**: Implémentation d'un délai min/max configurable pour simuler le comportement humain.
+- **Gestion "Il n'y a pas de faute"**: Amélioration de la détection et du clic sur le bouton "Il n'y a pas de faute", y compris la gestion du texte d'instruction.
+- **Configuration Clé API**: Ajout d'une interface pour saisir et sauvegarder la clé API Gemini.
 
-### 🐛 Fixed
-- **Button Conflict**: Resolved issue where the extension clicked instruction text instead of the "No Mistake" button.
-- **Click Event**: Implemented robust click simulation (mousedown/mouseup/click) for better compatibility.
-- **Encoding**: Fixed character encoding issues in the popup.
+### 🐛 Corrigé
+- **Conflit de Bouton**: Résolution du problème où l'extension cliquait sur le texte d'instruction au lieu du bouton "Il n'y a pas de faute".
+- **Événement de Clic**: Implémentation d'une simulation de clic robuste (mousedown/mouseup/click) pour une meilleure compatibilité.
+- **Encodage**: Correction des problèmes d'encodage de caractères dans la popup.
 
-### 🔧 Changed
-- **UI**: Renamed "Master" toggle for clarity.
-- **Manifest**: Updated permissions to allow communication with Gemini API.
+### 🔧 Modifié
+- **Interface Utilisateur**: Renommage de l'interrupteur "Master" pour plus de clarté.
+- **Manifeste**: Mise à jour des permissions pour permettre la communication avec l'API Gemini.

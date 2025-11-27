@@ -87,6 +87,223 @@
       border-top: 1px solid #eee;
       padding-top: 5px;
     }
+
+    /* New styles for settings overlay */
+    .settings-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .settings-overlay.hidden {
+      display: none;
+    }
+
+    .settings-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 15px;
+    }
+
+    .settings-header h2 {
+      margin: 0;
+      font-size: 18px;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+      padding: 0;
+      width: auto;
+    }
+
+    .close-btn:hover {
+      color: #333;
+    }
+
+    .setting-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 0;
+      border-bottom: 1px solid #eee;
+    }
+
+    .setting-item:last-child {
+      border-bottom: none;
+    }
+
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 34px;
+      height: 20px;
+    }
+
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: #ccc;
+      transition: .4s;
+      border-radius: 20px;
+    }
+
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 2px;
+      bottom: 2px;
+      background-color: white;
+      transition: .4s;
+      border-radius: 50%;
+    }
+
+    input:checked+.slider {
+      background-color: #2196F3;
+    }
+
+    input:focus+.slider {
+      box-shadow: 0 0 1px #2196F3;
+    }
+
+    input:checked+.slider:before {
+      transform: translateX(14px);
+    }
+
+    .version-info {
+      margin-top: 20px;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    .version-info p {
+      margin-bottom: 5px;
+    }
+
+    .update-status {
+      margin-top: 10px;
+      font-size: 11px;
+      color: #555;
+    }
+
+    .footer {
+      display: flex;
+      justify-content: flex-end;
+      /* Align to right since we removed one button */
+      margin-top: 15px;
+      gap: 10px;
+    }
+
+    .footer button {
+      width: auto;
+      margin-top: 0;
+    }
+
+    .footer .secondary {
+      background-color: #6c757d;
+    }
+
+    .footer .secondary:hover {
+      background-color: #5a6268;
+    }
+
+    .footer .icon-btn {
+      width: 40px;
+      padding: 8px 0;
+      font-size: 18px;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .footer .icon-btn:hover {
+      background-color: #0056b3;
+    }
+
+    /* Dark Mode Styles */
+    body.dark-mode {
+      background-color: #333;
+      color: #f9f9f9;
+    }
+
+    body.dark-mode h1,
+    body.dark-mode .control-group label,
+    body.dark-mode .status,
+    body.dark-mode #log,
+    body.dark-mode .settings-header h2,
+    body.dark-mode .setting-item label,
+    body.dark-mode .version-info p,
+    body.dark-mode .update-status {
+      color: #f9f9f9;
+    }
+
+    body.dark-mode .control-group {
+      background: #444;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    body.dark-mode input[type="number"],
+    body.dark-mode input[type="password"] {
+      background-color: #555;
+      border-color: #666;
+      color: #f9f9f9;
+    }
+
+    body.dark-mode #log {
+      border-top-color: #555;
+    }
+
+    body.dark-mode .settings-overlay {
+      background-color: rgba(0, 0, 0, 0.7);
+    }
+
+    body.dark-mode .settings-content {
+      background-color: #333;
+      color: #f9f9f9;
+    }
+
+    body.dark-mode .close-btn {
+      color: #f9f9f9;
+    }
+
+    body.dark-mode .setting-item {
+      border-bottom-color: #555;
+    }
+
+    body.dark-mode .switch .slider {
+      background-color: #555;
+    }
+
+    body.dark-mode input:checked+.slider {
+      background-color: #007bff;
+    }
   </style>
 </head>
 
@@ -129,7 +346,35 @@
     </div>
   </div>
 
+  <div class="footer">
+    <button id="openSettings" class="icon-btn" title="Paramètres">⚙️</button>
+  </div>
+
   <div id="log"></div>
+
+  <!-- Settings Overlay -->
+  <div id="settingsOverlay" class="settings-overlay hidden">
+    <div class="control-group settings-content">
+      <div class="settings-header">
+        <h2>Paramètres</h2>
+        <button id="closeSettings" class="close-btn">×</button>
+      </div>
+
+      <div class="setting-item">
+        <label for="themeToggle">Mode Sombre</label>
+        <label class="switch">
+          <input type="checkbox" id="themeToggle">
+          <span class="slider round"></span>
+        </label>
+      </div>
+
+      <div class="version-info">
+        <p>Version actuelle : <span id="currentVersion">...</span></p>
+        <button id="checkUpdate" class="secondary">Vérifier les mises à jour</button>
+        <div id="updateStatus" class="update-status"></div>
+      </div>
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
