@@ -1,6 +1,6 @@
 # 🎓 Projet Voltaire Assistant (AI Powered)
 
-### Version : 1.4.0
+### Version : 1.4.3
 
 **Cet outil est destiné à des fins éducatives et de test.**
 
