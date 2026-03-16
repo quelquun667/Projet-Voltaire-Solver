@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
-  "name": "Projet Voltaire Assistant",
-  "version": "1.4.3",
+  "name": "Projet Voltaire Solver",
+  "version": "2.0.0",
   "description": "Automatiser la résolution des exercices et certifications du Projet Voltaire",
   "permissions": [
     "activeTab",
@@ -10,7 +10,6 @@
   ],
   "host_permissions": [
     "*://*.projet-voltaire.fr/*",
-    "https://generativelanguage.googleapis.com/*",
     "https://raw.githubusercontent.com/*"
   ],
   "action": {
@@ -39,6 +38,16 @@
       "js": [
         "content.js"
       ]
+    },
+    {
+      "matches": [
+        "*://*.projet-voltaire.fr/*"
+      ],
+      "js": [
+        "extractor.js"
+      ],
+      "world": "MAIN",
+      "run_at": "document_idle"
     }
   ]
 }

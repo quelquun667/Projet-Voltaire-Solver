@@ -4,8 +4,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const solveToggle = document.getElementById('solveToggle');
     const delayMinInput = document.getElementById('delayMin');
     const delayMaxInput = document.getElementById('delayMax');
-    const apiKeyInput = document.getElementById('apiKeyInput');
-    const aiToggle = document.getElementById('aiToggle');
     const logDiv = document.getElementById('log');
 
     // Settings UI Elements
@@ -20,10 +18,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsBadge = document.getElementById('settingsBadge');
 
     // Load saved state
-    chrome.storage.local.get(['inspectorEnabled', 'solveEnabled', 'delayMin', 'delayMax', 'apiKey', 'aiEnabled', 'darkMode'], (result) => {
+    chrome.storage.local.get(['inspectorEnabled', 'solveEnabled', 'delayMin', 'delayMax', 'darkMode'], (result) => {
         inspectorToggle.checked = result.inspectorEnabled || false;
         solveToggle.checked = result.solveEnabled || false;
-        aiToggle.checked = result.aiEnabled || false;
 
         if (result.darkMode) {
             document.body.classList.add('dark-mode');
@@ -32,10 +29,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (result.delayMin !== undefined) delayMinInput.value = result.delayMin;
         if (result.delayMax !== undefined) delayMaxInput.value = result.delayMax;
-        if (result.apiKey) apiKeyInput.value = result.apiKey;
-        if (result.delayMin !== undefined) delayMinInput.value = result.delayMin;
-        if (result.delayMax !== undefined) delayMaxInput.value = result.delayMax;
-        if (result.apiKey) apiKeyInput.value = result.apiKey;
 
         // Auto-check for updates on load
         checkForUpdates(true);
@@ -136,13 +129,6 @@ document.addEventListener('DOMContentLoaded', () => {
         sendMessageToContent({ action: 'toggleSolve', enabled: enabled });
     });
 
-    // AI Toggle
-    aiToggle.addEventListener('change', () => {
-        const enabled = aiToggle.checked;
-        chrome.storage.local.set({ aiEnabled: enabled });
-        sendMessageToContent({ action: 'toggleAI', enabled: enabled });
-    });
-
     // Delay Inputs
     function updateDelay() {
         const min = parseInt(delayMinInput.value, 10) || 1000;
@@ -153,12 +139,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     delayMinInput.addEventListener('change', updateDelay);
     delayMaxInput.addEventListener('change', updateDelay);
-
-    // API Key Input
-    apiKeyInput.addEventListener('change', () => {
-        const key = apiKeyInput.value.trim();
-        chrome.storage.local.set({ apiKey: key });
-    });
 
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

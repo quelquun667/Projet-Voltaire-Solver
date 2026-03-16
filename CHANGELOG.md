@@ -1,5 +1,25 @@
 # Changelog
 
+## [2.0.0] - 2026-03-16
+
+### ✨ Ajouté
+- **Extraction React Fiber** : Les réponses sont désormais extraites directement depuis l'état interne React de Projet Voltaire via un script MAIN world (`extractor.js`).
+- **Résolution autonome** : Plus besoin d'IA ni de système d'apprentissage — les bonnes réponses sont lues dans le code source de la page.
+- **Support complet Drag & Drop** : Résolution automatique de tous les types de tableaux (COD/COI, pluriels, etc.) avec détection dynamique de l'exercice actif et de ses colonnes.
+- **Skip automatique** : Les écrans de règles, mémos, popups de difficulté et corrections sont passés automatiquement (CONTINUER/SUIVANT).
+- **Détection URL** : Le solver et l'extracteur ne s'exécutent que sur les pages d'exercice (`/exercice`).
+- **GitHub Actions** : Workflow automatique pour créer des releases avec le ZIP de l'extension à chaque tag.
+
+### 🔧 Modifié
+- **Architecture** : Nouveau script `extractor.js` en MAIN world pour accéder au React Fiber tree, communication avec `content.js` via CustomEvent et DOM.
+- **Simulation de clic** : Utilisation de PointerEvents + MouseEvents pour compatibilité React Native Web (Pressable).
+- **Matching de phrases** : Normalisation Unicode (apostrophes courbes, tirets insécables), suppression de ponctuation et matching flou (seuil 60%).
+
+### 🗑️ Supprimé
+- **Intégration Gemini AI** : Suppression complète de l'API Google Gemini et des appels au background service worker.
+- **Système d'apprentissage** : Suppression du cache `learnedAnswers` et du fallback aléatoire.
+- **Clé API** : Suppression de l'interface de saisie de clé API dans le popup.
+
 ## [1.4.3] - 2025-11-27
 
 ### ✨ Ajouté
