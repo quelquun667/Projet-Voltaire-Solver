@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         try {
             const currentVersion = chrome.runtime.getManifest().version;
-            const response = await fetch('https://raw.githubusercontent.com/quelquun667/Projet-Voltaire-Auto-Solve/refs/heads/main/ProjetVolataireExtension/manifest.json');
+            const response = await fetch('https://raw.githubusercontent.com/quelquun667/Projet-Voltaire-Solver/refs/heads/main/ProjetVoltaireExtension/manifest.json');
 
             if (!response.ok) throw new Error('Erreur réseau');
 
@@ -100,10 +100,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (silent) {
                     settingsBadge.classList.add('visible');
                     // Also update status text if settings menu is opened later
-                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Auto-Solve" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
+                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
                     updateStatusDiv.style.color = 'green';
                 } else {
-                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Auto-Solve" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
+                    updateStatusDiv.innerHTML = `Nouvelle version disponible : <b>${remoteVersion}</b><br><a href="https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest" target="_blank" style="color: #007bff;">Télécharger sur GitHub</a>`;
                     updateStatusDiv.style.color = 'green';
                 }
             } else {
