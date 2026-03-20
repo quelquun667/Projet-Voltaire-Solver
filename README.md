@@ -1,6 +1,6 @@
 # 🎓 Projet Voltaire Solver
 
-### Version : 2.0.0
+### Version : 2.1.0
 
 **Cet outil est destiné à des fins éducatives et de test.**
 

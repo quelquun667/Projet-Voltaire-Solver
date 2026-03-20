@@ -1,5 +1,26 @@
 # Changelog
 
+## [2.1.0] - 2026-03-20
+
+### ✨ Ajouté
+- **Taux d'erreur configurable** : Slider 0-50% dans le popup pour simuler des erreurs humaines et rendre l'utilisation plus réaliste.
+- **Compteur de stats** : Affichage en temps réel du nombre de réponses correctes, erreurs et total dans le popup.
+- **Support pages d'entraînement** : Le solver fonctionne désormais aussi sur les pages `/entrainement` (tests blancs, examens).
+- **Skip automatique audio** : Détection et clic automatique sur "DÉSACTIVER" (popup fonctionnalités sonores) et "JE NE PEUX PAS ÉCOUTER" (exercices audio).
+- **Validation des délais** : Seuil minimum de 1000ms, le min ne peut pas dépasser le max, avertissement visuel.
+
+### 🔧 Modifié
+- **Clic "Pas de faute"** : Le clic est désormais délégué au MAIN world (`extractor.js`) via `__pv_click` CustomEvent pour une compatibilité fiable avec React.
+- **D&D : identification exercice** : Recherche élargie aux éléments `div[tabindex="0"]` en plus de `[data-testid="html"]` pour supporter les mots simples (Chou, Ami, ci, etc.).
+- **D&D : détection phrases placées** : Remplacement du filtre `.r-vacyoi` par une comparaison de position Y (au-dessus/en-dessous des colonnes).
+- **D&D : retour typé** : `solveDragAndDrop` retourne `'moved'`/`'done'`/`'error'` au lieu de `true`/`false`, évitant de cliquer VALIDER en boucle quand l'exercice n'est pas identifié.
+- **README** : Suppression des références à l'IA Gemini, mise à jour de l'architecture et des instructions.
+
+### 🐛 Corrigé
+- **D&D boucle infinie** : Ne clique plus VALIDER quand l'exercice D&D n'est pas reconnu.
+- **Bouton "Pas de faute" non cliqué** : Résolu via le mécanisme de clic MAIN world.
+- **Réponses multi-mots** : Support des réponses contenant plusieurs mots (ex: "des pâtisseries") en cherchant chaque mot individuellement dans le DOM.
+
 ## [2.0.0] - 2026-03-16
 
 ### ✨ Ajouté

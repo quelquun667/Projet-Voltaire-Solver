@@ -123,9 +123,42 @@ document.addEventListener('__pv_extract', function() {
     storeExercises();
 });
 
+// Listen for click requests from content script (MAIN world can trigger React handlers)
+document.addEventListener('__pv_click', function(e) {
+    var x = e.detail && e.detail.x;
+    var y = e.detail && e.detail.y;
+    if (x == null || y == null) return;
+
+    var el = document.elementFromPoint(x, y);
+    if (!el) {
+        console.log('[Extractor] No element at', x, y);
+        return;
+    }
+    console.log('[Extractor] Clicking element at', x, y, ':', el.tagName, el.innerText && el.innerText.substring(0, 30));
+
+    // Walk up to find the Pressable (has onPress handler via React fiber)
+    var target = el;
+    for (var i = 0; i < 5; i++) {
+        if (!target) break;
+        var rect = target.getBoundingClientRect();
+        var cx = rect.left + rect.width / 2;
+        var cy = rect.top + rect.height / 2;
+        var opts = { bubbles: true, cancelable: true, view: window, clientX: cx, clientY: cy };
+
+        target.dispatchEvent(new PointerEvent('pointerdown', Object.assign({}, opts, { pointerId: 1 })));
+        target.dispatchEvent(new MouseEvent('mousedown', opts));
+        target.dispatchEvent(new PointerEvent('pointerup', Object.assign({}, opts, { pointerId: 1 })));
+        target.dispatchEvent(new MouseEvent('mouseup', opts));
+        target.dispatchEvent(new MouseEvent('click', opts));
+        target.click();
+
+        target = target.parentElement;
+    }
+});
+
 // Only run on exercise pages
 function isExercisePage() {
-    return window.location.href.includes('/exercice');
+    return window.location.href.includes('/exercice') || window.location.href.includes('/entrainement');
 }
 
 // Also run on init with retry
