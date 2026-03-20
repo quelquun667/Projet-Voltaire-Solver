@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Projet Voltaire Solver",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "description": "Automatiser la résolution des exercices et certifications du Projet Voltaire",
   "permissions": [
     "activeTab",
