@@ -4,6 +4,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const solveToggle = document.getElementById('solveToggle');
     const delayMinInput = document.getElementById('delayMin');
     const delayMaxInput = document.getElementById('delayMax');
+    const errorRateInput = document.getElementById('errorRate');
+    const errorRateValue = document.getElementById('errorRateValue');
     const logDiv = document.getElementById('log');
 
     // Settings UI Elements
@@ -18,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const settingsBadge = document.getElementById('settingsBadge');
 
     // Load saved state
-    chrome.storage.local.get(['inspectorEnabled', 'solveEnabled', 'delayMin', 'delayMax', 'darkMode'], (result) => {
+    chrome.storage.local.get(['inspectorEnabled', 'solveEnabled', 'delayMin', 'delayMax', 'darkMode', 'errorRate'], (result) => {
         inspectorToggle.checked = result.inspectorEnabled || false;
         solveToggle.checked = result.solveEnabled || false;
 
@@ -29,10 +31,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (result.delayMin !== undefined) delayMinInput.value = result.delayMin;
         if (result.delayMax !== undefined) delayMaxInput.value = result.delayMax;
+        if (result.errorRate !== undefined) {
+            errorRateInput.value = result.errorRate;
+            errorRateValue.textContent = result.errorRate;
+        }
 
         // Auto-check for updates on load
         checkForUpdates(true);
     });
+
+    // Load and display stats
+    function updateStats() {
+        chrome.storage.local.get(['statsCorrect', 'statsWrong'], (result) => {
+            const correct = result.statsCorrect || 0;
+            const wrong = result.statsWrong || 0;
+            document.getElementById('statCorrect').textContent = correct;
+            document.getElementById('statWrong').textContent = wrong;
+            document.getElementById('statTotal').textContent = correct + wrong;
+        });
+    }
+    updateStats();
+    // Refresh stats every 2 seconds while popup is open
+    setInterval(updateStats, 2000);
 
     // Settings Menu Logic
     openSettingsBtn.addEventListener('click', () => {
@@ -129,16 +149,53 @@ document.addEventListener('DOMContentLoaded', () => {
         sendMessageToContent({ action: 'toggleSolve', enabled: enabled });
     });
 
-    // Delay Inputs
-    function updateDelay() {
-        const min = parseInt(delayMinInput.value, 10) || 1000;
-        const max = parseInt(delayMaxInput.value, 10) || 2000;
+    // Delay Inputs with validation
+    const delayWarning = document.getElementById('delayWarning');
+    const MIN_DELAY = 1000;
+
+    function validateAndUpdateDelay() {
+        let min = parseInt(delayMinInput.value, 10) || MIN_DELAY;
+        let max = parseInt(delayMaxInput.value, 10) || 2000;
+        let warning = '';
+
+        // Enforce minimum threshold
+        if (min < MIN_DELAY) {
+            min = MIN_DELAY;
+            delayMinInput.value = MIN_DELAY;
+            warning = 'Minimum 1000ms pour eviter les bugs.';
+        }
+        if (max < MIN_DELAY) {
+            max = MIN_DELAY;
+            delayMaxInput.value = MIN_DELAY;
+            warning = 'Minimum 1000ms pour eviter les bugs.';
+        }
+
+        // Ensure min <= max
+        if (min > max) {
+            max = min;
+            delayMaxInput.value = max;
+            warning = 'Max ajuste au min.';
+        }
+
+        delayWarning.textContent = warning;
+        delayWarning.style.display = warning ? 'block' : 'none';
+
         chrome.storage.local.set({ delayMin: min, delayMax: max });
         sendMessageToContent({ action: 'updateDelay', min: min, max: max });
     }
 
-    delayMinInput.addEventListener('change', updateDelay);
-    delayMaxInput.addEventListener('change', updateDelay);
+    delayMinInput.addEventListener('change', validateAndUpdateDelay);
+    delayMaxInput.addEventListener('change', validateAndUpdateDelay);
+
+    // Error Rate Slider
+    errorRateInput.addEventListener('input', () => {
+        errorRateValue.textContent = errorRateInput.value;
+    });
+    errorRateInput.addEventListener('change', () => {
+        const rate = parseInt(errorRateInput.value, 10);
+        chrome.storage.local.set({ errorRate: rate });
+        sendMessageToContent({ action: 'updateErrorRate', rate: rate });
+    });
 
     // Listen for messages from content script
     chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {

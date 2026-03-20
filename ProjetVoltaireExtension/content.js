@@ -8,14 +8,23 @@ let delayMax = 2000;
 let isSolving = false;
 let lastDetectedSentence = '';
 let movedPhrases = new Set(); // Track D&D phrases already placed
+let errorRate = 0; // Percentage of intentional mistakes (0-50)
 
 // Load initial settings
-chrome.storage.local.get(['delayMin', 'delayMax', 'solveEnabled'], (result) => {
+chrome.storage.local.get(['delayMin', 'delayMax', 'solveEnabled', 'errorRate'], (result) => {
     if (result.delayMin !== undefined) delayMin = result.delayMin;
     if (result.delayMax !== undefined) delayMax = result.delayMax;
+    if (result.errorRate !== undefined) errorRate = result.errorRate;
     solveEnabled = result.solveEnabled || false;
     if (solveEnabled) solveLoop();
 });
+
+function incrementStat(type) {
+    const key = type === 'correct' ? 'statsCorrect' : 'statsWrong';
+    chrome.storage.local.get([key], (result) => {
+        chrome.storage.local.set({ [key]: (result[key] || 0) + 1 });
+    });
+}
 
 const config = {
     wordSelector: 'div[tabindex="0"]',
@@ -39,6 +48,9 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         delayMin = request.min;
         delayMax = request.max;
         console.log(`Delay updated: ${delayMin}-${delayMax}ms`);
+    } else if (request.action === 'updateErrorRate') {
+        errorRate = request.rate;
+        console.log(`Error rate updated: ${errorRate}%`);
     }
 });
 
@@ -167,19 +179,40 @@ function isDragAndDropPage() {
     return pageText.includes('Cliquer / Déposer') || pageText.includes('Cliquer / D\u00e9poser');
 }
 
+// Returns: 'moved' | 'done' | 'error'
 function solveDragAndDrop(exercises) {
     const dndExercises = exercises.filter(ex => ex.type === 'drag_and_drop');
     if (dndExercises.length === 0) {
         console.log('[D&D] No drag_and_drop exercises in data');
-        return false;
+        return 'error';
     }
 
     // Find all visible data-testid="html" elements on the page
     const htmlElements = Array.from(document.querySelectorAll('[data-testid="html"]')).filter(isVisible);
-    const pageTexts = htmlElements.map(el => normalizeSentence(el.innerText.trim()));
+    // Also search div[tabindex="0"] for simple word cards
+    const tabElements = Array.from(document.querySelectorAll('div[tabindex="0"]')).filter(el => {
+        if (!isVisible(el)) return false;
+        const text = (el.innerText || '').trim();
+        // Filter to short text elements that look like D&D cards (not buttons/UI)
+        return text.length > 0 && text.length < 60 && !el.querySelector('svg') &&
+            !(text.toUpperCase().includes('VALIDER')) &&
+            !(text.toUpperCase().includes('CONTINUER')) &&
+            !(text.toUpperCase().includes('SUIVANT'));
+    });
+    // Merge both sources, deduplicate by text
+    const allCardElements = [...htmlElements, ...tabElements];
+    const seen = new Set();
+    const uniqueCards = [];
+    for (const el of allCardElements) {
+        const text = normalizeSentence(el.innerText.trim());
+        if (text && !seen.has(text)) {
+            seen.add(text);
+            uniqueCards.push({ element: el, text: text });
+        }
+    }
+    const pageTexts = uniqueCards.map(c => c.text);
 
     // Step 1: Identify which D&D exercise is currently displayed
-    // by matching page texts against each exercise's words
     let currentExercise = null;
     let bestMatchCount = 0;
 
@@ -192,7 +225,7 @@ function solveDragAndDrop(exercises) {
         }
         let matchCount = 0;
         for (const pt of pageTexts) {
-            if (allWords.includes(pt) && !movedPhrases.has(pt)) matchCount++;
+            if (allWords.includes(pt)) matchCount++;
         }
         if (matchCount > bestMatchCount) {
             bestMatchCount = matchCount;
@@ -202,7 +235,12 @@ function solveDragAndDrop(exercises) {
 
     if (!currentExercise || bestMatchCount === 0) {
         console.log('[D&D] Could not identify current D&D exercise on page');
-        return false;
+        console.log('[D&D] Page texts:', pageTexts.slice(0, 10));
+        if (dndExercises.length > 0) {
+            const sampleWords = dndExercises[0].columns[0].words.slice(0, 5).map(w => normalizeSentence(stripHtml(w)));
+            console.log('[D&D] Sample exercise words:', sampleWords);
+        }
+        return 'error';
     }
 
     // Step 2: Build mapping for THIS exercise only
@@ -216,21 +254,36 @@ function solveDragAndDrop(exercises) {
     }
     console.log(`[D&D] Matched exercise with ${columnNames.length} columns: [${columnNames.join(', ')}]`);
 
-    // Step 3: Find unplaced phrases
-    const unplacedPhrases = [];
-    for (const htmlEl of htmlElements) {
-        const text = normalizeSentence(htmlEl.innerText.trim());
-        const card = htmlEl.parentElement;
-        if (!card) continue;
-        if (movedPhrases.has(text)) continue;
+    // Step 3: Find unplaced phrases using all detected cards
+    // Find drop zone Y position to distinguish placed vs unplaced
+    const dropZonesCheck = Array.from(document.querySelectorAll('.r-vacyoi')).filter(isVisible);
+    let dropZoneTop = Infinity;
+    for (const dz of dropZonesCheck) {
+        const r = dz.getBoundingClientRect();
+        if (r.top < dropZoneTop) dropZoneTop = r.top;
+    }
 
-        if (phraseToColumn[text]) {
-            unplacedPhrases.push({ element: card, text: text, column: phraseToColumn[text] });
+    const unplacedPhrases = [];
+    for (const card of uniqueCards) {
+        if (movedPhrases.has(card.text)) continue;
+
+        // The clickable element: for [data-testid="html"], click the parent card
+        const clickTarget = card.element.hasAttribute && card.element.hasAttribute('data-testid')
+            ? card.element.parentElement : card.element;
+        if (!clickTarget) continue;
+
+        // Skip elements that are below the drop zone top (already placed)
+        const cardRect = clickTarget.getBoundingClientRect();
+        if (dropZoneTop < Infinity && cardRect.top >= dropZoneTop - 10) continue;
+
+        const colName = phraseToColumn[card.text];
+        if (colName) {
+            unplacedPhrases.push({ element: clickTarget, text: card.text, column: colName });
         } else {
-            const stripped = stripPunctuation(text);
-            for (const [phraseKey, colName] of Object.entries(phraseToColumn)) {
+            const stripped = stripPunctuation(card.text);
+            for (const [phraseKey, cn] of Object.entries(phraseToColumn)) {
                 if (stripPunctuation(phraseKey) === stripped) {
-                    unplacedPhrases.push({ element: card, text: text, column: colName });
+                    unplacedPhrases.push({ element: clickTarget, text: card.text, column: cn });
                     break;
                 }
             }
@@ -239,7 +292,7 @@ function solveDragAndDrop(exercises) {
 
     if (unplacedPhrases.length === 0) {
         console.log('[D&D] No unplaced phrases remaining');
-        return false;
+        return 'done';
     }
 
     console.log(`[D&D] Found ${unplacedPhrases.length} unplaced phrases`);
@@ -282,7 +335,7 @@ function solveDragAndDrop(exercises) {
 
     if (zoneMap.length === 0) {
         console.log('[D&D] Could not find drop zones');
-        return false;
+        return 'error';
     }
 
     console.log(`[D&D] Mapped ${zoneMap.length} drop zones:`, zoneMap.map(z => z.column));
@@ -293,7 +346,7 @@ function solveDragAndDrop(exercises) {
 
     if (!targetZone) {
         console.log(`[D&D] No drop zone found for column: ${phrase.column}`);
-        return false;
+        return 'error';
     }
 
     console.log(`[D&D] Moving "${phrase.text}" → "${phrase.column}"`);
@@ -304,7 +357,7 @@ function solveDragAndDrop(exercises) {
         simulateClick(targetZone.element);
     }, 400);
 
-    return true;
+    return 'moved';
 }
 
 // --- Main solve logic ---
@@ -313,7 +366,7 @@ function solveLoop() {
     if (!solveEnabled || isSolving) return;
 
     // Only run on exercise pages
-    if (!window.location.href.includes('/exercice')) {
+    if (!window.location.href.includes('/exercice') && !window.location.href.includes('/entrainement')) {
         setTimeout(solveLoop, 2000);
         return;
     }
@@ -344,23 +397,26 @@ function solveLoop() {
         const exercises = getExercisesFromDOM();
         if (exercises) {
             isSolving = true;
-            const moved = solveDragAndDrop(exercises);
+            const dndResult = solveDragAndDrop(exercises);
             isSolving = false;
-            if (moved) {
+            if (dndResult === 'moved') {
                 setTimeout(solveLoop, currentDelay + 600);
                 return;
             }
-            // No more phrases to move → click VALIDER
-            const validerBtn = allClickable.find(btn => {
-                const text = (btn.innerText || '').trim().toUpperCase();
-                return text.includes('VALIDER');
-            });
-            if (validerBtn) {
-                console.log('[D&D] All placed, clicking VALIDER');
-                simulateClick(validerBtn);
-                setTimeout(solveLoop, currentDelay + 1000);
-                return;
+            if (dndResult === 'done') {
+                // All phrases placed → click VALIDER
+                const validerBtn = allClickable.find(btn => {
+                    const text = (btn.innerText || '').trim().toUpperCase();
+                    return text.includes('VALIDER');
+                });
+                if (validerBtn) {
+                    console.log('[D&D] All placed, clicking VALIDER');
+                    simulateClick(validerBtn);
+                    setTimeout(solveLoop, currentDelay + 1000);
+                    return;
+                }
             }
+            // dndResult === 'error' → don't click VALIDER, just retry
         } else {
             console.warn('[D&D] Extractor not ready, will retry...');
         }
@@ -368,9 +424,34 @@ function solveLoop() {
         return;
     }
 
-    // 1. Check for skip screens (rules, corrections, difficulty popups)
-    // If there are no clickable exercise words, any CONTINUER/SUIVANT button is a skip button
+    // 1. Check for popups/modals (sound features, difficulty, etc.)
     const allButtons = Array.from(document.querySelectorAll('button')).filter(isVisible);
+
+    // Auto-dismiss "Fonctionnalités sonores" popup → click DÉSACTIVER
+    const disableBtn = allButtons.find(btn => {
+        const text = (btn.innerText || '').trim().toUpperCase();
+        return text === 'DÉSACTIVER' || text === 'DESACTIVER';
+    });
+    if (disableBtn) {
+        console.log('Popup detected, clicking DÉSACTIVER');
+        disableBtn.click();
+        setTimeout(solveLoop, currentDelay);
+        return;
+    }
+
+    // Auto-click "JE NE PEUX PAS ÉCOUTER" for audio exercises
+    const cantListenBtn = allButtons.find(btn => {
+        const text = (btn.innerText || '').trim().toUpperCase();
+        return text.includes('NE PEUX PAS') || text.includes('PAS ÉCOUTER') || text.includes('PAS ECOUTER');
+    });
+    if (cantListenBtn) {
+        console.log('Audio exercise detected, clicking "Je ne peux pas écouter"');
+        cantListenBtn.click();
+        setTimeout(solveLoop, currentDelay);
+        return;
+    }
+
+    // Skip screens (rules, corrections, difficulty) — no exercise words visible
     const clickableWords = document.querySelectorAll('div[tabindex="0"]');
     const hasExerciseWords = Array.from(clickableWords).some(el => {
         const text = (el.innerText || '').trim();
@@ -472,22 +553,59 @@ function solveLoop() {
                     const answer = getAnswerForExercise(currentExercise);
                     console.log('Answer:', answer);
 
-                    if (answer && answer.type === 'no_mistake' && noMistakeButton) {
-                        console.log('No mistake → clicking "Pas de faute"');
-                        simulateClick(noMistakeButton);
-                        noMistakeButton.click();
-                        if (noMistakeButton.parentElement) {
-                            simulateClick(noMistakeButton.parentElement);
+                    // Check if we should intentionally make a mistake
+                    const shouldMakeMistake = errorRate > 0 && Math.random() * 100 < errorRate;
+
+                    if (shouldMakeMistake && sentenceWords.length > 1) {
+                        // Intentional mistake: click a random wrong word or wrong action
+                        console.log(`Intentional mistake (${errorRate}% rate)`);
+                        incrementStat('wrong');
+                        if (answer && answer.type === 'no_mistake') {
+                            // Should be "pas de faute" → click a random word instead
+                            const randomWord = sentenceWords[Math.floor(Math.random() * sentenceWords.length)];
+                            simulateClick(randomWord);
+                        } else if (answer && answer.type === 'click_word') {
+                            // Should click a specific word → click "pas de faute" or wrong word
+                            if (noMistakeButton && Math.random() < 0.5) {
+                                const rect = noMistakeButton.getBoundingClientRect();
+                                document.dispatchEvent(new CustomEvent('__pv_click', { detail: { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 } }));
+                            } else {
+                                // Click a wrong word
+                                const wrongWords = sentenceWords.filter(w =>
+                                    normalizeSentence(w.innerText.trim()) !== normalizeSentence(answer.word)
+                                );
+                                if (wrongWords.length > 0) {
+                                    const randomWrong = wrongWords[Math.floor(Math.random() * wrongWords.length)];
+                                    simulateClick(randomWrong);
+                                }
+                            }
                         }
-                        noMistakeButton.style.border = '2px solid green';
+                    } else if (answer && answer.type === 'no_mistake') {
+                        console.log('No mistake → clicking "Pas de faute"');
+                        // Find the button using multiple strategies
+                        let btn = noMistakeButton;
+                        if (!btn) {
+                            const allBtns = Array.from(document.querySelectorAll('[data-testid="button"], button, div[role="button"]')).filter(isVisible);
+                            btn = allBtns.find(b => {
+                                const t = normalizeText(b.innerText || '').toUpperCase();
+                                return t.includes('PAS DE FAUTE');
+                            });
+                        }
+                        if (btn) {
+                            console.log('Found Pas de faute button:', btn.tagName, btn.className.substring(0, 50));
+                            const rect = btn.getBoundingClientRect();
+                            const cx = rect.left + rect.width / 2;
+                            const cy = rect.top + rect.height / 2;
+                            document.dispatchEvent(new CustomEvent('__pv_click', { detail: { x: cx, y: cy } }));
+                            incrementStat('correct');
+                        } else {
+                            console.warn('Pas de faute button not found!');
+                        }
                     } else if (answer && answer.type === 'click_word') {
                         const normalizedAnswer = normalizeSentence(answer.word);
-                        // Try exact match first
                         let targetWord = sentenceWords.find(w =>
                             normalizeSentence(w.innerText.trim()) === normalizedAnswer
                         );
-                        // If no exact match, the answer might be multi-word
-                        // Try to find a DOM word that is part of the answer
                         if (!targetWord) {
                             const answerWords = normalizedAnswer.split(/\s+/);
                             targetWord = sentenceWords.find(w => {
@@ -498,7 +616,7 @@ function solveLoop() {
                         if (targetWord) {
                             console.log('Clicking correct word:', answer.word, '→', targetWord.innerText.trim());
                             simulateClick(targetWord);
-                            targetWord.style.border = '2px solid green';
+                            incrementStat('correct');
                         } else {
                             console.warn('Word not found in DOM:', answer.word);
                         }
