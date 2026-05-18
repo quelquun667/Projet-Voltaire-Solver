@@ -1,47 +1,70 @@
+<div align="center">
+
 # 🎓 Projet Voltaire Solver
 
-### Version : 2.1.1
+**Automatically solve Projet Voltaire grammar exercises using React Fiber extraction — no AI, no API key.**
 
-**Cet outil est destiné à des fins éducatives et de test.**
+[![Version](https://img.shields.io/badge/version-2.2.0-blue?style=flat-square)](https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest)
+[![Manifest V3](https://img.shields.io/badge/Manifest-V3-green?style=flat-square&logo=google-chrome)](https://developer.chrome.com/docs/extensions/mv3/)
+[![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 
-Une extension Chrome qui résout automatiquement les exercices Projet Voltaire en extrayant les réponses directement depuis le code source de la page (React Fiber).
+[🇫🇷 Version française](README.fr.md)
 
-## ✨ Fonctionnalités
+<img src="images/interface.png" alt="Extension interface" width="340"/>
 
-*   **🔍 Extraction React Fiber** : Trouve les réponses directement dans l'état interne de l'application, sans IA ni API externe.
-*   **✅ Exercices "Cliquer sur la faute"** : Détecte et clique automatiquement sur le mot erroné, ou sur "Il n'y a pas de faute".
-*   **📝 Exercices "Cliquer sur le mot"** : Identifie et clique sur le bon mot (COD, participe passé, etc.).
-*   **📋 Exercices "Cliquer / Déposer"** : Place automatiquement les phrases dans les bonnes colonnes (tableaux).
-*   **⏱️ Délai Aléatoire** : Délai configurable entre chaque réponse pour simuler un comportement humain.
-*   **🕵️ Mode Inspecteur** : Pour le débogage, permet d'inspecter les éléments de la page.
-*   **🌗 Mode Clair/Sombre** : Interface utilisateur adaptable.
-*   **🔄 Vérification de mise à jour** : Avertissement automatique si une nouvelle version est disponible.
+</div>
+
+---
+
+## ✨ Features
+
+| Feature | Description |
+|---|---|
+| 🔍 **React Fiber Extraction** | Reads answers directly from the app's internal React state — no guessing |
+| ✅ **Click-the-mistake exercises** | Detects and clicks the wrong word, or "Il n'y a pas de faute" |
+| 📝 **Click-the-word exercises** | Identifies and clicks the correct word (COD, past participle, etc.) |
+| 📋 **Drag & Drop exercises** | Automatically places phrases in the correct columns (Tableau) |
+| 📊 **Per-session stats** | Correct / wrong / total counter, reset at the start of each new session |
+| ⏱️ **Random delay** | Configurable min/max delay between answers to mimic human behaviour |
+| 🎲 **Error rate** | Intentionally make mistakes at a configurable rate (0–50%) |
+| 🕵️ **Inspector mode** | Click any element on the page to see its selector (debug) |
+| 🌗 **Dark / Light mode** | Adapts to your preference |
+| 🔔 **Auto update check** | Notified automatically when a new version is available |
+
+---
 
 ## 🚀 Installation
 
-1.  Téléchargez la dernière [**Release**](https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest) (fichier `.zip`) et extrayez-la.
-2.  Ouvrez Google Chrome et allez sur `chrome://extensions/`.
-3.  Activez le **Mode développeur** (en haut à droite).
-4.  Cliquez sur **Charger l'extension non empaquetée** (Load unpacked).
-5.  Sélectionnez le dossier `ProjetVoltaireExtension` (celui qui contient le fichier `manifest.json`).
+1. Download the latest **[Release](https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest)** (`.zip` file) and extract it.
+2. Open Chrome and go to `chrome://extensions/`.
+3. Enable **Developer mode** (top-right toggle).
+4. Click **Load unpacked**.
+5. Select the `ProjetVoltaireExtension` folder (the one containing `manifest.json`).
 
-## ⚙️ Utilisation
-
-1.  Ouvrez l'extension (icône dans Chrome).
-2.  Activez **Auto Solve**.
-3.  Configurez le délai min/max si souhaité (par défaut 1s - 2s).
-4.  Allez sur un exercice Projet Voltaire — l'extension résout automatiquement.
-
-## 🛠️ Architecture
-
-*   `content.js` : Script principal — détection d'exercice, matching, clic automatique.
-*   `extractor.js` : Script MAIN world — traverse le React Fiber pour extraire les données d'exercice.
-*   `background.js` : Service worker minimal.
-*   `popup.html` / `popup.js` : Interface utilisateur de l'extension.
-
-## 🔄 Mise à jour
-
-Téléchargez la dernière release, remplacez le dossier, et cliquez "Actualiser" sur `chrome://extensions/`.
+> **Updating:** Download the new release, replace the folder, then click **Refresh** (↺) on `chrome://extensions/`.
 
 ---
-*Note : Cet outil est destiné à des fins éducatives et de test.*
+
+## ⚙️ Usage
+
+1. Open the extension popup (Chrome toolbar icon).
+2. Toggle **Auto Solve** on.
+3. Adjust the min/max delay if needed (default: 1 s – 2 s).
+4. Navigate to a Projet Voltaire exercise — the extension takes care of the rest.
+
+---
+
+## 🛠️ How it works
+
+Projet Voltaire is a React Native Web application. The extension injects two scripts:
+
+- **`extractor.js`** runs in the page's MAIN world and traverses the React Fiber tree to extract exercise data (correct answer, type, sentence). It exposes this data via a hidden DOM element.
+- **`content.js`** runs in the isolated extension world, reads that data, matches the displayed words to the right exercise, and simulates native pointer events to click the answer.
+
+This approach requires no external API and works regardless of what the page looks like visually.
+
+---
+
+## ⚠️ Disclaimer
+
+This tool is intended for educational and testing purposes only.
