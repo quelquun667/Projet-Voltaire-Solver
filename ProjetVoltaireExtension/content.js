@@ -7,6 +7,8 @@ let delayMin = 1000;
 let delayMax = 2000;
 let isSolving = false;
 let lastDetectedSentence = '';
+let lastDetectedSentenceTime = 0; // Horodatage de la dernière phrase unique détectée
+let lastPageWasExercise = false; // Détection de transition vers une nouvelle session
 let movedPhrases = new Set(); // Track D&D phrases already placed
 let errorRate = 0; // Percentage of intentional mistakes (0-50)
 
@@ -363,12 +365,22 @@ function solveDragAndDrop(exercises) {
 // --- Main solve logic ---
 
 function solveLoop() {
-    if (!solveEnabled || isSolving) return;
+    if (!solveEnabled) return;
+    if (isSolving) { setTimeout(solveLoop, 500); return; }
 
-    // Only run on exercise pages
-    if (!window.location.href.includes('/exercice') && !window.location.href.includes('/entrainement')) {
+    const isExercisePage = window.location.href.includes('/exercice') || window.location.href.includes('/entrainement');
+
+    if (!isExercisePage) {
+        lastPageWasExercise = false;
         setTimeout(solveLoop, 2000);
         return;
+    }
+
+    // Transition vers une nouvelle session d'exercice → remise à zéro des compteurs
+    if (!lastPageWasExercise) {
+        lastPageWasExercise = true;
+        chrome.storage.local.set({ statsCorrect: 0, statsWrong: 0 });
+        console.log('[solveLoop] Nouvelle session détectée, compteurs remis à zéro');
     }
 
     const currentDelay = getRandomDelay();
@@ -397,8 +409,12 @@ function solveLoop() {
         const exercises = getExercisesFromDOM();
         if (exercises) {
             isSolving = true;
-            const dndResult = solveDragAndDrop(exercises);
-            isSolving = false;
+            let dndResult;
+            try {
+                dndResult = solveDragAndDrop(exercises);
+            } finally {
+                isSolving = false;
+            }
             if (dndResult === 'moved') {
                 setTimeout(solveLoop, currentDelay + 600);
                 return;
@@ -536,15 +552,24 @@ function solveLoop() {
     if (sentenceWords.length > 0) {
         const fullSentence = sentenceWords.map(w => w.innerText.trim()).join(' ');
 
-        if (fullSentence !== lastDetectedSentence) {
+        const sentenceChanged = fullSentence !== lastDetectedSentence;
+        const sentenceStalled = !sentenceChanged && (Date.now() - lastDetectedSentenceTime > 10000);
+        if (sentenceStalled) {
+            console.warn('[solveLoop] Même phrase depuis >10s, réinitialisation pour réessayer');
+            lastDetectedSentence = '';
+        }
+
+        if (sentenceChanged || sentenceStalled) {
             console.log('Detected sentence:', fullSentence);
 
             isSolving = true;
+            try {
 
             const exercises = getExercisesFromDOM();
             if (exercises) {
                 // Only mark as seen once we have exercises to work with
                 lastDetectedSentence = fullSentence;
+                lastDetectedSentenceTime = Date.now();
                 console.log(`Found ${exercises.length} exercises in React state.`);
                 const displayedWords = sentenceWords.map(w => w.innerText.trim());
                 const currentExercise = findCurrentExercise(exercises, displayedWords);
@@ -635,7 +660,9 @@ function solveLoop() {
                 console.warn('Extractor not ready, will retry...');
             }
 
-            isSolving = false;
+            } finally {
+                isSolving = false;
+            }
         }
     }
 

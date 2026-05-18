@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.2.0] - 2026-05-18
+
+### ✨ Ajouté
+- **Compteurs remis à zéro par session** : Les stats (correct/erreurs/total) sont maintenant réinitialisées automatiquement à chaque nouvelle session d'exercice, au lieu d'être cumulées globalement.
+
+### 🐛 Corrigé
+- **Boucle de résolution qui s'arrêtait** : Si une exception inattendue se produisait entre `isSolving = true` et `isSolving = false`, la boucle mourrait définitivement. Protégé par `try/finally` sur les deux blocs concernés.
+- **`isSolving` bloqué** : L'early return sans `setTimeout` quand `isSolving` était `true` pouvait bloquer la boucle indéfiniment. Remplacé par un retry à 500ms.
+- **Stall silencieux** : Si un clic ne s'enregistrait pas dans React, la phrase restait identique à `lastDetectedSentence` et la boucle tournait sans rien faire. Après 10 secondes sur la même phrase, `lastDetectedSentence` est réinitialisé pour forcer un réessai.
+- **HTML popup** : Structure `<div>` incorrecte — le slider du taux d'erreur était hors de son bloc `control-group`.
+
 ## [2.1.0] - 2026-03-20
 
 ### ✨ Ajouté
