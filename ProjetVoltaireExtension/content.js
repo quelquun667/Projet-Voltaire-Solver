@@ -98,7 +98,7 @@ function findCurrentExercise(exercises, displayedWords) {
 
     for (const ex of exercises) {
         if (!ex.sentence) continue;
-        const exText = normalizeSentence(ex.sentence.map(s => s.text).join(' '));
+        const exText = normalizeSentence(ex.sentence.map(s => stripHtml(s.text)).join(' '));
         const exStripped = stripPunctuation(exText);
 
         // Exact match (with or without punctuation)
@@ -141,7 +141,7 @@ function getAnswerForExercise(exercise) {
         }
         for (const part of exercise.sentence) {
             if (part.mistake) {
-                return { type: 'click_word', word: part.text };
+                return { type: 'click_word', word: stripHtml(part.text) };
             }
         }
     }
@@ -150,7 +150,7 @@ function getAnswerForExercise(exercise) {
     if (exercise.type === 'click_on_word') {
         for (const part of exercise.sentence) {
             if (part.clue) {
-                return { type: 'click_word', word: part.text };
+                return { type: 'click_word', word: stripHtml(part.text) };
             }
         }
     }
@@ -158,7 +158,7 @@ function getAnswerForExercise(exercise) {
     // Fallback: look for any word with mistake or clue
     for (const part of exercise.sentence) {
         if (part.mistake || part.clue) {
-            return { type: 'click_word', word: part.text };
+            return { type: 'click_word', word: stripHtml(part.text) };
         }
     }
 
