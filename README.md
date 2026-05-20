@@ -4,7 +4,7 @@
 
 **Automatically solve Projet Voltaire grammar exercises using React Fiber extraction — no AI, no API key.**
 
-[![Version](https://img.shields.io/badge/version-2.2.0-blue?style=flat-square)](https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest)
+[![Version](https://img.shields.io/badge/version-2.2.1-blue?style=flat-square)](https://github.com/quelquun667/Projet-Voltaire-Solver/releases/latest)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-green?style=flat-square&logo=google-chrome)](https://developer.chrome.com/docs/extensions/mv3/)
 [![License](https://img.shields.io/badge/license-MIT-orange?style=flat-square)](LICENSE)
 

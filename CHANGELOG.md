@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.1] - 2026-05-20
+
+### 🐛 Corrigé
+- **Mots avec HTML (ex: "1ère")** : Les mots dont le texte contient du HTML brut dans le React Fiber (ex: `1<sup>ère</sup>`) n'étaient pas trouvés dans le DOM. `stripHtml()` est maintenant appliqué dans `findCurrentExercise` et `getAnswerForExercise`.
+
 ## [2.2.0] - 2026-05-18
 
 ### ✨ Ajouté
